@@ -88,7 +88,7 @@ class RSMNetwork(nn.Module):
     """
     Residual Spectral Mapping (RSM) network that refines the beamformed output.
     """
-    def __init__(self, num_freq_bins, kernel_size=3):
+    def __init__(self, kernel_size=3):
         super().__init__()
         
         self.residual_net = nn.Sequential(
@@ -143,7 +143,7 @@ class DSF_RSM(nn.Module):
     def __init__(self, num_channels, num_freq_bins):
         super().__init__()
         self.dsf = DSFModule(num_channels, num_freq_bins)
-        self.rsm = RSMNetwork(num_freq_bins)
+        self.rsm = RSMNetwork()
         
     def forward(self, x_complex):
         """
