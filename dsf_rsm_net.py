@@ -151,12 +151,53 @@ class DSF_RSM(nn.Module):
         returns: enhanced complex output [batch, freq_bins, time_frames]
         """
         # Apply dynamic spatial filtering
+        print(f"x_complex.shape {x_complex.shape} x_complex.dtype {x_complex.dtype}")
+        # x_complex.shape torch.Size([1, 2, 257, 63]) B C F T x_complex.dtype torch.float32
         beamformed = self.dsf(x_complex)
-        
+        print(f"beamformed.shape {beamformed.shape} beamformed.dtype {beamformed.dtype}")
+        # beamformed.shape torch.Size([1, 257, 63]) beamformed.dtype torch.float32
         # Apply residual spectral mapping
-        enhanced = self.rsm(beamformed)       
+        enhanced = self.rsm(beamformed)
+        print(f"enhanced.shape {enhanced.shape} enhanced.dtype {enhanced.dtype}")
+        # enhanced.shape torch.Size([1, 257, 63]) enhanced.dtype torch.complex64
         return enhanced
 
+
+def test_rsm():
+    from ptflops import get_model_complexity_info
+    wav = torch.rand(B, T)
+    spec_in = torch.stft(
+        wav,
+        n_fft=512,
+        hop_length=256,
+        win_length=512,
+        window=torch.hann_window(n_fft).to(wav.device),
+        return_complex=True
+    ) # # [B, F, T']
+    print(spec_in.shape)
+    print(spec_in.dtype)
+
+    rsm = RSMNetwork()
+
+    enhanced_spec = rsm(spec_in)  # [B, F, T']
+    print(f"Enhanced STFT shape: {enhanced_spec.shape}")
+    
+    enhanced_wav = torch.istft(
+        enhanced_spec,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        win_length=n_fft,
+        length=T
+    )  # [B, T]
+    
+    print(f"Output waveform shape: {enhanced_wav.shape}")
+
+    flops, params = get_model_complexity_info(rsm,
+                                              (257, 63),
+                                              as_strings=True,
+                                              print_per_layer_stat=False)
+    print(f'flops:{flops}, params:{params}')
+    # flops:644.63 MMac, params:39.56 k
 
 
 
@@ -166,10 +207,13 @@ def test_dsf_rsm():
     stft_module = multi_channeled_STFT(n_fft=n_fft, hop_length=hop_length)
     # STFT: [B, C, F, T']
     spec = stft_module.to_spec_complex(wav)
-    print(f"model input shape: {spec.shape} spec.dtype {spec.dtype}") # model input shape: torch.Size([16, 2, 257, 63]) spec.dtype torch.complex64
+    print(f"model input shape: {spec.shape} spec.dtype {spec.dtype}")
+    # B C F T'
+    # model input shape: torch.Size([16, 2, 257, 63]) spec.dtype torch.complex64
     model = DSF_RSM(num_channels=C, num_freq_bins=num_freq_bins)
     est_spec = model(spec)
-    print(f"model output shape: {est_spec.shape}") # model output shape: torch.Size([16, 257, 63])
+    print(f"model output shape: {est_spec.shape}")
+    # model output shape: torch.Size([16, 257, 63])
     # B, F, T_ = est_spec.shape
     est_wav = torch.istft(
         est_spec,
@@ -179,14 +223,15 @@ def test_dsf_rsm():
         length=wav.shape[-1]
     )  # [B, T]
     est_wav = est_wav.unsqueeze(1)  # [B, 1, T]   
-    print(f"Output shape: {est_wav.shape}") # Output shape: torch.Size([16, 1, 16000])
+    print(f"Output shape: {est_wav.shape}")
+    # Output shape: torch.Size([16, 1, 16000])
 
 
 def test_model_complexity_info():
     from ptflops import get_model_complexity_info
     model = DSF_RSM(num_channels=C, num_freq_bins=num_freq_bins)
     flops, params = get_model_complexity_info(model,
-                                              (2, 257, 63),
+                                              (C, 257, 63),
                                               as_strings=True,
                                               print_per_layer_stat=False)
     print(f'flops:{flops}, params:{params}')
@@ -200,3 +245,4 @@ if __name__ == "__main__":
 
     test_dsf_rsm()
     test_model_complexity_info()
+    test_rsm()
