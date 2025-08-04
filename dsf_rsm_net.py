@@ -196,9 +196,8 @@ def test_rsm():
                                               (257, 63),
                                               as_strings=True,
                                               print_per_layer_stat=False)
-    print(f'flops:{flops}, params:{params}')
-    # flops:644.63 MMac, params:39.56 k
-
+    print(f'rsm flops:{flops}, params:{params}')
+    # rsm flops:644.63 MMac, params:39.56 k
 
 
 def test_dsf_rsm():
@@ -234,8 +233,8 @@ def test_model_complexity_info():
                                               (C, 257, 63),
                                               as_strings=True,
                                               print_per_layer_stat=False)
-    print(f'flops:{flops}, params:{params}')
-    # flops:704.57 MMac, params:43.07 k
+    print(f'DSF_RSM flops:{flops}, params:{params}')
+    # DSF_RSM flops:704.57 MMac, params:43.07 k
 
 
 if __name__ == "__main__":
